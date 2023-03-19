@@ -1,8 +1,4 @@
-ICMP_REQUEST = 8
-ICMP_REPLY   = 0
-
-ARP_REQUEST  = 1
-ARP_REPLY    = 0
+import constants as const
 
             # Ethernet level
 def printARP(nPacket, dstMAC, srcMAC,
@@ -20,7 +16,7 @@ def printARP(nPacket, dstMAC, srcMAC,
     '           |Protocol  Type: {}|\n'.format(protoType) + \
     '           |Hardware Address Length: {}|\n'.format(hwAddrLen) + \
     '           |Protocol Address Length: {}|\n'.format(protoAddrLen) + \
-    '           |Operation Code: {}|\n'.format('ARP Request' if opCode == ARP_REQUEST else 'ARP Reply') + \
+    '           |Operation Code: {}|\n'.format('ARP Request' if opCode == const.ARP_REQUEST else 'ARP Reply') + \
     '           |Src Hardware Address: {}|\n'.format(srcHwAddr) + \
     '           |Src Protocol Address: {}|\n'.format(srcProtoAddr) + \
     '           |Target Hardware Address: {}|\n'.format(tgtHwAddr) + \
@@ -48,7 +44,7 @@ def printICMP(nPacket, dstMAC, srcMAC,
     '            |Src IP: {}|\n'.format(srcIP) + \
     '            |Dst IP: {}|\n'.format(dstIP) + \
     '               --|ICMP Message|\n' + \
-    '                   |Type:       {}|\n'.format('ICMP Request' if typeMsg == ICMP_REQUEST else 'ICMP Reply') + \
+    '                   |Type:       {}|\n'.format('ICMP Request' if typeMsg == const.ICMP_REQUEST else 'ICMP Reply') + \
     '                   |Code:       {}|\n'.format(code) + \
     '                   |Checksum:   {:x}|\n'.format(checksum) + \
     '                   |Identifier: {}|\n'.format(identifier) + \

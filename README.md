@@ -1,6 +1,7 @@
 # Snake Sniffer
 =============
-## A simple GUI Python based for network sniffing 
+## A simple GUI Python based for network sniffing
+It offers a histogram for ARP, ICMP, TCP and UDP. It also provides a real time display.
 
 
 ## Home screen

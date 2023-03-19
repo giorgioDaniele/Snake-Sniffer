@@ -9,6 +9,6 @@
 
 ## In action
 -------------
-![running](https://user-images.githubusercontent.com/103143708/226161870-7977c659-d151-4682-8c5b-6d02c3081a09.png)
+![running](https://user-images.githubusercontent.com/103143708/226170712-b444c519-2dc1-4e91-8aba-d9e6b9800f7f.png)
 
 

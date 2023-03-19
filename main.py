@@ -6,7 +6,6 @@ import socket
 from netparser import packetParser
 # Thread library importing
 from threading import Thread
-import re, uuid
 
 # From Internet :)
 class ParserThread(Thread):
@@ -31,11 +30,19 @@ APP_THEME            = 'Default 1'
 
 # Hystogram
 BAR_WIDTH       = 70
-BAR_SPACING     = 100
-EDGE_OFFSET     = 170
-HYSTO_SIZE      = (900,100)
-DATA_SIZE       = (700,100)
+BAR_SPACING     = 80
+EDGE_OFFSET     = 210
+HYSTO_SIZE      = (600,100)
+DATA_SIZE       = (530,100)
 COLORS          = ['blue','red','green', 'magenta']
+
+# Trend
+STEP_SIZE       = 1  
+SAMPLES         = 100 
+SAMPLE_MAX      = 100 
+CANVAS_SIZE     = (650, 100)
+
+# create an array of time and data value
 
 
 
@@ -71,7 +78,7 @@ def main():
     sniffTCP    = False
     sniffUDP    = False
 
-    counters = [0,0,0,0]   
+    protocolCounters = [0,0,0,0]
 
     relARP  = 0
     relICMP = 0
@@ -80,9 +87,13 @@ def main():
 
     # Defining a theme
     sg.theme(APP_THEME)
-    # All the stuff inside your window.
+
     hystogram = sg.Graph(HYSTO_SIZE, (0,0), DATA_SIZE, background_color = 'black')
-    curves    = sg.Graph(HYSTO_SIZE, (0,0), DATA_SIZE, background_color = 'black')
+    curves    = sg.Graph(CANVAS_SIZE, (0,0), (SAMPLES, SAMPLE_MAX), background_color = 'black', key = 'trend')
+
+
+
+
     layout = [
         [
         sg.Button('Start', key = 'Start', font = TOOLBAR_FONT, disabled = False),
@@ -93,7 +104,7 @@ def main():
         sg.Checkbox('TCP', text_color = 'red', key = 'TCP', default = False, font = TOOLBAR_FONT),
         sg.Checkbox('UDP', text_color = 'green', key = 'UDP', default = False, font = TOOLBAR_FONT),
         ],
-        [sg.Text('Statististics',font = TOOLBAR_FONT), hystogram, curves],
+        [sg.Text('Protocols',font = TOOLBAR_FONT), hystogram, curves],
         [sg.Multiline(default_text = HELLO_MESSAGE, text_color = 'white', key = 'OUT', 
                       font = OUTPUT_SCREEN_FONT, 
                       size = OUTPUT_SCREEN_SIZE, disabled = True, autoscroll = False,
@@ -103,12 +114,36 @@ def main():
     # Create the Window
     window = sg.Window('Packet Sniffer', layout, size = WINDOW_SIZE)
 
+    curves = window['trend']
+    instant = 0; 
+
+    prevX = 0
+    
+    prevYARP  = 0; newYARP  = 0
+    prevYICMP = 0; newYICMP = 0
+    prevYTCP  = 0; newYTCP  = 0
+    prevYUDP  = 0; newYUDP  = 0
+
+    xAxis      = []
+    yAxisARP   = []
+    yAxisICMP  = []
+    yAxisTCP   = []
+    yAxisUDP   = []
+    
+    for _ in range(SAMPLES+1): 
+        xAxis.append(0)
+        yAxisARP.append(0)
+        yAxisICMP.append(0)
+        yAxisTCP.append(0)
+        yAxisUDP.append(0)
+
+
     while True:
         # If the user wants to sniff the traffic and the socket has been opened
         if (startCapture == True & socketOpened == True):
             packet, _ = sock.recvfrom(BUFFER_SIZE) 
             # Create a new parser thread
-            parser = ParserThread(target=packetParser, args=(nPacket, packet, sniffARP, sniffICMP, sniffTCP, sniffUDP, counters))
+            parser = ParserThread(target=packetParser, args=(nPacket, packet, sniffARP, sniffICMP, sniffTCP, sniffUDP, protocolCounters))
             parser.start()
             result = parser.join()
             sniffOutput += result
@@ -119,16 +154,15 @@ def main():
             sock = startSniffing()
             socketOpened = True
         # Window events
-
-        event, values = window.read(timeout=1000)
-        if values['ARP']  == True: sniffARP  = True
-        if values['ICMP'] == True: sniffICMP = True
-        if values['TCP']  == True: sniffTCP  = True
-        if values['UDP']  == True: sniffUDP  = True
-        if values['ARP']  == False: sniffARP  = False
-        if values['ICMP'] == False: sniffICMP = False
-        if values['TCP']  == False: sniffTCP  = False
-        if values['UDP']  == False: sniffUDP  = False
+        event, points = window.read(timeout=500)
+        if points['ARP']  == True: sniffARP  = True
+        if points['ICMP'] == True: sniffICMP = True
+        if points['TCP']  == True: sniffTCP  = True
+        if points['UDP']  == True: sniffUDP  = True
+        if points['ARP']  == False: sniffARP  = False
+        if points['ICMP'] == False: sniffICMP = False
+        if points['TCP']  == False: sniffTCP  = False
+        if points['UDP']  == False: sniffUDP  = False
 
         if event == sg.WIN_CLOSED:
             break
@@ -153,18 +187,55 @@ def main():
             window['OUT'].update(autoscroll=True)
         hystogram.erase()
         if(nPacket > 0):
-            relARP  = (counters[0] / nPacket) * 100
-            relTCP  = (counters[1] / nPacket) * 100
-            relUDP  = (counters[2] / nPacket) * 100
-            relICMP = (counters[3] / nPacket) * 100
+            relARP  = (protocolCounters[0] / nPacket) * 100
+            relTCP  = (protocolCounters[1] / nPacket) * 100
+            relUDP  = (protocolCounters[2] / nPacket) * 100
+            relICMP = (protocolCounters[3] / nPacket) * 100
         for i, x in enumerate([relARP, relTCP, relUDP, relICMP]):
             hystogram.draw_rectangle(top_left = (i * BAR_SPACING + EDGE_OFFSET, x),
             bottom_right = (i * BAR_SPACING + EDGE_OFFSET + BAR_WIDTH, 0), fill_color = COLORS[i])
-        hystogram.draw_text(text = '  ARP:  {} {:.2f}%'.format(counters[0], relARP),location=(70, 20), color = 'blue', font = TOOLBAR_FONT)
-        hystogram.draw_text(text = '  TCP:  {} {:.2f}%'.format(counters[1], relTCP),location=(70, 40), color = 'red', font = TOOLBAR_FONT)
-        hystogram.draw_text(text = '  UDP:  {} {:.2f}%'.format(counters[2], relUDP),location=(70, 60), color = 'green', font = TOOLBAR_FONT)
-        hystogram.draw_text(text = '  ICMP: {} {:.2f}%'.format(counters[3], relICMP),location=(70, 80), color = 'magenta', font = TOOLBAR_FONT)
 
+        hystogram.draw_text(text = 'ARP:  {} {:.2f}%'.format(protocolCounters[0], relARP),location = (100, 20), color = 'blue', font = TOOLBAR_FONT)
+        hystogram.draw_text(text = 'TCP:  {} {:.2f}%'.format(protocolCounters[1], relTCP),location = (100, 40), color = 'red', font = TOOLBAR_FONT)
+        hystogram.draw_text(text = 'UDP:  {} {:.2f}%'.format(protocolCounters[2], relUDP),location = (100, 60), color = 'green', font = TOOLBAR_FONT)
+        hystogram.draw_text(text = 'ICMP: {} {:.2f}%'.format(protocolCounters[3], relICMP),location = (100, 80), color = 'magenta', font = TOOLBAR_FONT)
+
+        #Insert instant time
+        xAxis.insert(i, instant)
+        #Insert statistics
+        yAxisARP.insert(i,  relTCP if relARP  <= SAMPLE_MAX else SAMPLE_MAX)
+        yAxisICMP.insert(i, relICMP if relICMP <= SAMPLE_MAX else SAMPLE_MAX)
+        yAxisTCP.insert(i,  relTCP if relTCP  <= SAMPLE_MAX else SAMPLE_MAX)
+        yAxisUDP.insert(i,  relUDP if relUDP  <= SAMPLE_MAX else SAMPLE_MAX)
+
+        newX     = xAxis[i]
+        newYARP  = yAxisARP[i]
+        newYICMP = yAxisICMP[i]
+        newYTCP  = yAxisTCP[i]
+        newYUDP  = yAxisUDP[i]
+
+        if instant >= SAMPLES:
+            # Shift graph over if full of data
+            curves.move(-STEP_SIZE, 0)
+            prevX = prevX - STEP_SIZE
+            # Shift the array data points
+            for i in range(SAMPLES):
+                yAxisARP[i]  = yAxisARP[i+1]
+                yAxisICMP[i] = yAxisICMP[i+1]
+                yAxisTCP[i]  = yAxisTCP[i+1]
+                yAxisUDP[i]  = yAxisUDP[i+1]
+                xAxis[i]     = xAxis[i+1]
+        curves.draw_line((prevX, prevYARP),  (newX, newYARP),  color='blue')
+        curves.draw_line((prevX, prevYICMP), (newX, newYICMP), color='magenta')
+        curves.draw_line((prevX, prevYTCP),  (newX, newYTCP),  color='red')
+        curves.draw_line((prevX, prevYUDP),  (newX, newYUDP),  color='green')
+        prevX, prevYARP  = newX, newYARP
+        prevX, prevYICMP = newX, newYICMP
+        prevX, prevYTCP  = newX, newYTCP
+        prevX, prevYUDP  = newX, newYUDP
+        instant += STEP_SIZE if i < SAMPLES else 0
+
+        
     # Closing the program
     window.close()
 

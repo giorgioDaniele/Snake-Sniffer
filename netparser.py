@@ -60,26 +60,19 @@ def packetParser(nPacket, packet, arp = False, icmp = False, tcp = False, udp = 
                 flagRst  = (offsetReversedFlags &   4)   >>  2
                 flagSyn  = (offsetReversedFlags &   2)   >>  1
                 flagFin  = offsetReversedFlags  &   1
-                result = printTCP(nPacket, dstMAC, srcMAC, 
-                                  version, headerLength, ttl, srcIP, dstIP,
-                                  sport, dport, seq, ack, 
-                                  flagUrg, flagAck, flagPsh, flagRst, flagSyn, flagFin, packet[offset:])
+                result = printTCP(nPacket, dstMAC, srcMAC,version, headerLength, ttl, srcIP, dstIP, sport, dport, seq, ack, flagUrg, flagAck, flagPsh, flagRst, flagSyn, flagFin, packet[offset:])
             if (proto == UDP and udp == True):
                 #BLUE
                 counters[2] += 1
                 packet = packet[headerLength:]
                 sport, dport, length, checksum = struct.unpack(UDP_PATTERN, packet[:8])
-                result = printUDP(nPacket, dstMAC, srcMAC,
-                                   version, headerLength, ttl, srcIP, dstIP,
-                                   sport, dport, length, checksum)[:]
+                result = printUDP(nPacket, dstMAC, srcMAC, version, headerLength, ttl, srcIP, dstIP, sport, dport, length, checksum)
             if (proto == ICMP and icmp == True):
                 #YELLOW
                 counters[3] += 1
                 packet = packet[headerLength:]
                 typeMsg, code, checksum, identifier, seqNumber = struct.unpack(ICMP_PATTERN,packet[:8])
-                result = printICMP(nPacket, dstMAC, srcMAC,
-                                   version, headerLength, ttl, srcIP, dstIP,
-                                   typeMsg, code, checksum, identifier, seqNumber) 
+                result = printICMP(nPacket, dstMAC, srcMAC, version, headerLength, ttl, srcIP, dstIP, typeMsg, code, checksum, identifier, seqNumber) 
     return result
 
 
